@@ -35,15 +35,6 @@
 #include <WebCore/ExceptionDetails.h>
 #include <WebCore/SerializedScriptValue.h>
 
-namespace WTF {
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::Strong<JSC::JSCell>> {
-    static unsigned hash(const JSC::Strong<JSC::JSCell>& key) { return IntHash<uintptr_t>::hash(reinterpret_cast<uintptr_t>(key.get())); }
-    static bool equal(const JSC::Strong<JSC::JSCell>& a, const JSC::Strong<JSC::JSCell>& b) { return a.get() == b.get(); }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-}
-
 namespace WebKit {
 
 #if PLATFORM(COCOA)
@@ -109,18 +100,13 @@ JSObjectID JavaScriptEvaluationResult::addObjectToMap(JSGlobalContextRef context
         return *m_nullObjectID;
     }
 
-    JSC::JSGlobalObject* globalObject = ::toJS(context);
-    JSC::JSValue value = ::toJS(globalObject, object);
-    JSC::Strong<JSCell> cell { globalObject->vm(), value.asCell() };
-    if (cell) {
-        auto it = m_jsObjectsInMap.find(cell);
-        if (it != m_jsObjectsInMap.end())
-            return it->value;
-    }
+    Protected<JSValueRef> value(context, object);
+    auto it = m_jsObjectsInMap.find(value);
+    if (it != m_jsObjectsInMap.end())
+        return it->value;
 
     auto identifier = JSObjectID::generate();
-    if (cell)
-        m_jsObjectsInMap.set(WTFMove(cell), identifier);
+    m_jsObjectsInMap.set(WTFMove(value), identifier);
     m_map.add(identifier, toVariant(context, object));
     return identifier;
 }
@@ -218,40 +204,40 @@ JSValueRef JavaScriptEvaluationResult::toJS(JSGlobalContextRef context, Variant&
         return JSObjectMakeDate(context, 1, &argument, 0);
     }, [&] (Vector<JSObjectID>&& vector) -> JSValueRef {
         JSValueRef array = JSObjectMakeArray(context, 0, nullptr, 0);
-        m_jsArrays.append({ WTFMove(vector), array });
+        m_jsArrays.append({ WTFMove(vector), Protected<JSValueRef>(context, array) });
         return array;
     }, [&] (HashMap<JSObjectID, JSObjectID>&& map) -> JSValueRef {
         JSObjectRef dictionary = JSObjectMake(context, 0, 0);
-        m_jsDictionaries.append({ WTFMove(map), dictionary });
+        m_jsDictionaries.append({ WTFMove(map), Protected<JSObjectRef>(context, dictionary) });
         return dictionary;
     });
 }
 
-JSValueRef JavaScriptEvaluationResult::toJS(JSGlobalContextRef context)
+Protected<JSValueRef> JavaScriptEvaluationResult::toJS(JSGlobalContextRef context)
 {
     for (auto [identifier, variant] : std::exchange(m_map, { }))
-        m_instantiatedJSObjects.add(identifier, toJS(context, WTFMove(variant)));
-    for (auto [vector, array] : std::exchange(m_jsArrays, { })) {
-        JSObjectRef jsArray = JSValueToObject(context, array, 0);
+        m_instantiatedJSObjects.add(identifier, Protected<JSValueRef>(context, toJS(context, WTFMove(variant))));
+    for (auto& [vector, array] : std::exchange(m_jsArrays, { })) {
+        JSObjectRef jsArray = JSValueToObject(context, array.get(), 0);
         for (size_t index = 0; index < vector.size(); ++index) {
             auto identifier = vector[index];
-            if (JSValueRef element = m_instantiatedJSObjects.get(identifier))
-                JSObjectSetPropertyAtIndex(context, jsArray, index, element, 0);
+            if (Protected<JSValueRef> element = m_instantiatedJSObjects.get(identifier))
+                JSObjectSetPropertyAtIndex(context, jsArray, index, element.get(), 0);
         }
     }
-    for (auto [map, dictionary] : std::exchange(m_jsDictionaries, { })) {
+    for (auto& [map, dictionary] : std::exchange(m_jsDictionaries, { })) {
         for (auto [keyIdentifier, valueIdentifier] : map) {
-            JSValueRef key = m_instantiatedJSObjects.get(keyIdentifier);
+            Protected<JSValueRef> key = m_instantiatedJSObjects.get(keyIdentifier);
             if (!key)
                 continue;
-            ASSERT(JSValueIsString(context, key));
-            SUPPRESS_UNCOUNTED_ARG auto keyString = adopt(JSValueToStringCopy(context, key, nullptr));
+            ASSERT(JSValueIsString(context, key.get()));
+            SUPPRESS_UNCOUNTED_ARG auto keyString = adopt(JSValueToStringCopy(context, key.get(), nullptr));
             if (!keyString)
                 continue;
-            JSValueRef value = m_instantiatedJSObjects.get(valueIdentifier);
+            Protected<JSValueRef> value = m_instantiatedJSObjects.get(valueIdentifier);
             if (!value)
                 continue;
-            SUPPRESS_UNCOUNTED_ARG JSObjectSetProperty(context, dictionary, keyString.get(), value, 0, 0);
+            SUPPRESS_UNCOUNTED_ARG JSObjectSetProperty(context, dictionary.get(), keyString.get(), value.get(), 0, 0);
         }
     }
     return std::exchange(m_instantiatedJSObjects, { }).take(m_root);
@@ -269,10 +255,10 @@ WKRetainPtr<WKTypeRef> JavaScriptEvaluationResult::toWK()
     return API::SerializedScriptValue::deserializeWK(legacySerializedScriptValue()->internalRepresentation());
 }
 
-JSValueRef JavaScriptEvaluationResult::toJS(JSGlobalContextRef context)
+Protected<JSValueRef> JavaScriptEvaluationResult::toJS(JSGlobalContextRef context)
 {
     Ref serializedScriptValue = API::SerializedScriptValue::createFromWireBytes(wireBytes());
-    return serializedScriptValue->internalRepresentation().deserialize(context, nullptr);
+    return Protected<JSValueRef>(context, serializedScriptValue->internalRepresentation().deserialize(context, nullptr));
 }
 
 JavaScriptEvaluationResult::JavaScriptEvaluationResult(JSGlobalContextRef context, JSValueRef value)

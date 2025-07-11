@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "Protected.h"
 #include "WKRetainPtr.h"
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/Strong.h>
@@ -90,7 +91,7 @@ public:
 
     WKRetainPtr<WKTypeRef> toWK();
 
-    JSValueRef toJS(JSGlobalContextRef);
+    Protected<JSValueRef> toJS(JSGlobalContextRef);
 
 private:
     JavaScriptEvaluationResult(JSGlobalContextRef, JSValueRef);
@@ -119,14 +120,14 @@ private:
     Vector<std::pair<Vector<JSObjectID>, Ref<API::Array>>> m_arrays;
 
     // Used for serializing to IPC
-    HashMap<JSC::Strong<JSC::JSCell>, JSObjectID> m_jsObjectsInMap;
+    HashMap<Protected<JSValueRef>, JSObjectID> m_jsObjectsInMap;
     HashMap<RetainPtr<id>, JSObjectID> m_objectsInMap;
     std::optional<JSObjectID> m_nullObjectID;
 
     // Used for deserializing from IPC to JS
-    HashMap<JSObjectID, JSValueRef> m_instantiatedJSObjects;
-    Vector<std::pair<HashMap<JSObjectID, JSObjectID>, JSObjectRef>> m_jsDictionaries;
-    Vector<std::pair<Vector<JSObjectID>, JSValueRef>> m_jsArrays;
+    HashMap<JSObjectID, Protected<JSValueRef>> m_instantiatedJSObjects;
+    Vector<std::pair<HashMap<JSObjectID, JSObjectID>, Protected<JSObjectRef>>> m_jsDictionaries;
+    Vector<std::pair<Vector<JSObjectID>, Protected<JSValueRef>>> m_jsArrays;
 
     // IPC representation
     HashMap<JSObjectID, Variant> m_map;

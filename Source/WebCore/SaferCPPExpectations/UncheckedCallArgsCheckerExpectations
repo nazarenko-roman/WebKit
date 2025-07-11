@@ -1,7 +1,6 @@
 Modules/airplay/WebMediaSessionManager.cpp
 Modules/applicationmanifest/ApplicationManifestParser.cpp
 Modules/async-clipboard/ClipboardItemBindingsDataSource.cpp
-Modules/cookie-store/CookieStore.cpp
 Modules/credentialmanagement/CredentialsContainer.cpp
 Modules/gamepad/GamepadManager.cpp
 Modules/indexeddb/IDBCursor.cpp
@@ -482,10 +481,6 @@ page/SpatialNavigation.cpp
 page/TextIndicator.cpp
 page/VisualViewport.cpp
 page/cocoa/PageCocoa.mm
-page/csp/ContentSecurityPolicyDirectiveList.cpp
-page/csp/ContentSecurityPolicyMediaListDirective.cpp
-page/csp/ContentSecurityPolicySourceList.cpp
-page/csp/ContentSecurityPolicyTrustedTypesDirective.cpp
 page/mac/EventHandlerMac.mm
 page/mac/ServicesOverlayController.mm
 page/scrolling/AsyncScrollingCoordinator.cpp
@@ -809,7 +804,6 @@ svg/properties/SVGAnimatedString.cpp
 svg/properties/SVGAnimationAdditiveValueFunctionImpl.cpp
 testing/Internals.cpp
 testing/Internals.mm
-workers/DedicatedWorkerGlobalScope.cpp
 workers/Worker.cpp
 workers/WorkerGlobalScope.cpp
 workers/WorkerMessagingProxy.cpp

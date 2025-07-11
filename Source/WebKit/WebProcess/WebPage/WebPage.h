@@ -426,7 +426,7 @@ class WebFullScreenManager;
 class WebGestureEvent;
 class WebImage;
 class WebInspector;
-class WebInspectorClient;
+class WebInspectorBackendClient;
 class WebInspectorUI;
 class WebKeyboardEvent;
 class WebMouseEvent;
@@ -822,10 +822,6 @@ public:
 #endif
     void enableAccessibilityForAllProcesses();
     void enableAccessibility();
-
-#if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
-    void initializeAccessibility(Vector<SandboxExtension::Handle>&&);
-#endif
 
     void screenPropertiesDidChange();
 

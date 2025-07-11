@@ -890,7 +890,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     RetainPtr<WKTextListTouchBarViewController> _textListTouchBarViewController;
 
 @private
-    WebKit::WebViewImpl* _webViewImpl;
+    WeakPtr<WebKit::WebViewImpl> _webViewImpl;
 }
 
 @property (nonatomic) BOOL textIsBold;
@@ -1124,7 +1124,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 - (NSViewController *)textListViewController
 {
     if (!_textListTouchBarViewController)
-        _textListTouchBarViewController = adoptNS([[WKTextListTouchBarViewController alloc] initWithWebViewImpl:_webViewImpl]);
+        _textListTouchBarViewController = adoptNS([[WKTextListTouchBarViewController alloc] initWithWebViewImpl:_webViewImpl.get()]);
     return _textListTouchBarViewController.get();
 }
 
@@ -3737,13 +3737,9 @@ void WebViewImpl::enableAccessibilityIfNecessary(NSString *attribute)
 {
 #if ENABLE(INITIALIZE_ACCESSIBILITY_ON_DEMAND)
     // The attributes NSAccessibilityParentAttribute and NSAccessibilityPositionAttribute do not require AX initialization in the WebContent process.
-    Ref processPool = m_page->protectedLegacyMainFrameProcess()->processPool();
-    if (!processPool->hasReceivedAXRequestInUIProcess()
-        && ![attribute isEqualToString:NSAccessibilityParentAttribute]
-        && ![attribute isEqualToString:NSAccessibilityPositionAttribute]) {
-        m_page->initializeAccessibility();
-        accessibilityRegisterUIProcessTokens();
-        processPool->markHasReceivedAXRequestInUIProcess();
+    if (![attribute isEqualToString:NSAccessibilityParentAttribute] && ![attribute isEqualToString:NSAccessibilityPositionAttribute]) {
+        Ref processPool = m_page->configuration().processPool();
+        processPool->initializeAccessibilityIfNecessary();
     }
 #endif
 
@@ -6105,8 +6101,10 @@ void WebViewImpl::setUserInterfaceLayoutDirection(NSUserInterfaceLayoutDirection
 
 bool WebViewImpl::beginBackSwipeForTesting()
 {
-    RefPtr gestureController = m_gestureController;
-    return gestureController && gestureController->beginSimulatedSwipeInDirectionForTesting(ViewGestureController::SwipeDirection::Back);
+    if (!m_allowsBackForwardNavigationGestures)
+        return false;
+
+    return ensureProtectedGestureController()->beginSimulatedSwipeInDirectionForTesting(ViewGestureController::SwipeDirection::Back);
 }
 
 bool WebViewImpl::completeBackSwipeForTesting()
@@ -7008,7 +7006,7 @@ void WebViewImpl::updateScrollPocket()
         [m_topScrollPocket layout];
         captureView = [m_topScrollPocket captureView];
         [m_layerHostingView addSubview:captureView.get() positioned:NSWindowBelow relativeTo:nil];
-        [captureView layer].zPosition = -CGFLOAT_MAX;
+        [captureView layer].zPosition = std::numeric_limits<float>::lowest();
         [view addSubview:m_topScrollPocket.get()];
         for (NSView *pocketContainer in m_viewsAboveScrollPocket.get())
             [m_topScrollPocket addElementContainer:pocketContainer];

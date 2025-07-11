@@ -233,10 +233,12 @@
       "emails" : [
          "adrian_taylor@apple.com"
       ],
+      "github" : "adetaylor",
       "name" : "Adrian Taylor",
       "nicks" : [
          "adetaylor"
-      ]
+      ],
+      "status" : "committer"
    },
    {
       "emails" : [
@@ -1474,6 +1476,14 @@
       "nicks" : [
          "abinader"
       ]
+   },
+   {
+      "emails" : [
+         "bmedina2@apple.com"
+      ],
+      "github" : "iambryyy",
+      "name" : "Bryan Medina",
+      "status" : "committer"
    },
    {
       "emails" : [

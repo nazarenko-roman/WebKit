@@ -138,7 +138,7 @@ class HistoryItemClient;
 class OpportunisticTaskScheduler;
 class ImageAnalysisQueue;
 class ImageOverlayController;
-class InspectorClient;
+class InspectorBackendClient;
 class InspectorController;
 class IntSize;
 class KeyboardScrollingAnimator;
@@ -1350,6 +1350,7 @@ public:
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
     Headroom displayEDRHeadroom() const { return m_displayEDRHeadroom; }
+    bool hdrLayersRequireTonemapping() const { return m_hdrLayersRequireTonemapping; }
     void updateDisplayEDRHeadroom();
     void updateDisplayEDRSuppression();
 #endif
@@ -1785,8 +1786,8 @@ private:
 
 #if HAVE(SUPPORT_HDR_DISPLAY)
     Headroom m_displayEDRHeadroom { Headroom::None };
-    bool m_suppressEDR { false };
     bool m_screenSupportsHDR { false };
+    bool m_hdrLayersRequireTonemapping { false };
 #endif
 
     HashSet<std::pair<URL, ScriptTrackingPrivacyCategory>> m_scriptTrackingPrivacyReports;
